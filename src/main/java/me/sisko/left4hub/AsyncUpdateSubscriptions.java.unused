@@ -1,0 +1,214 @@
+package me.sisko.left4hub;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.sql.Statement;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import org.bukkit.Bukkit;
+import org.bukkit.scheduler.BukkitRunnable;
+
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.model.group.Group;
+import net.luckperms.api.model.user.User;
+import net.luckperms.api.node.Node;
+
+public class AsyncUpdateSubscriptions extends BukkitRunnable {
+	private Connection local;
+	private Connection web;
+	private LuckPerms perms;
+
+	public AsyncUpdateSubscriptions(Connection local, Connection web, LuckPerms perms) {
+		this.local = local;
+		this.web = web;
+		this.perms = perms;
+	}
+
+	@Override
+	public void run() {
+		try {
+			Statement local = this.local.createStatement();
+			Statement web = this.web.createStatement();
+
+			Main.getPlugin().getLogger().info("Checking subscriptions...");
+
+			// Get a full list of subscriptions from the website
+			List<Integer> subscriptionIds = new ArrayList<Integer>();
+			ResultSet result = web.executeQuery("SELECT ID FROM wpai_posts WHERE post_type='subscription';");
+			while (result.next()) {
+				subscriptionIds.add(result.getInt(1));
+			}
+			Main.getPlugin().getLogger().info("Found " + subscriptionIds.size() + " subscription ids.");
+
+			// get a list of subscriptions for which we currently have saved uuids
+			HashMap<Integer, String> savedSubscriptions = new HashMap<Integer, String>();
+			result = local.executeQuery("SELECT * FROM subscriptions;");
+			while (result.next()) {
+				savedSubscriptions.put(result.getInt(1), result.getString(2));
+			}
+
+			// iterate through subscription ids and save any new ones to the local database
+			for (int id : subscriptionIds) {
+				if (savedSubscriptions.get(id) == null) {
+					// we need to find the order id to figure out the in-game username
+					result = web.executeQuery(
+							"SELECT meta_value FROM wpai_postmeta WHERE meta_key='paid_by_orders' AND post_id=" + id
+									+ ";");
+					if (result.next()) {
+						int orderId = Integer.parseInt(result.getString(1).split(",")[0]); // I'm only gussing multiple
+																							// orders are separated by a
+																							// comma
+						result = web.executeQuery(
+								"SELECT meta_value FROM wpai_postmeta WHERE meta_key='player_id' AND post_id=" + orderId
+										+ ";");
+						if (result.next()) {
+							String uuid = UUIDFetcher.getUUID(result.getString(1));
+							local.executeUpdate("INSERT INTO subscriptions (id, uuid) VALUES (" + id + ",'" + uuid + "');");
+							savedSubscriptions.put(id, uuid);
+							Main.getPlugin().getLogger().info("Subscription " + id + " belongs to " + uuid);
+						} else {
+							Main.getPlugin().getLogger().warning("Could not find player name for order id " + orderId);
+						}
+					} else {
+						Main.getPlugin().getLogger().info("Could not find paid_by_orders for subscription id " + id);
+					}
+				}
+			}
+
+			// iterate through subscriptions and save products and update due dates
+			ArrayList<Integer> noUpdate = new ArrayList<Integer>();
+			for (int id : savedSubscriptions.keySet()) {
+				result = web.executeQuery("SELECT meta_value FROM wpai_postmeta WHERE post_id=" + id + " AND meta_key='payment_due';");
+				if(result.next()) {
+					long expires = result.getLong(1);
+					result = local.executeQuery("SELECT expires FROM subscriptions WHERE id=" + id + ";");
+					if(result.next()) {
+						if(expires == result.getLong(1)) {
+							Main.getPlugin().getLogger().info("Subscription " + id + " is already up to date.");
+							noUpdate.add(id); // no need to grant subscriptions if due date hasn't changed
+						} else {
+							Main.getPlugin().getLogger().info("Updating due date for subscription " + id);
+							local.executeUpdate("UPDATE subscriptions SET expires=" + expires + " WHERE id=" + id + ";");
+						}
+					} else {
+						Main.getPlugin().getLogger().info("Could not find expire time for subscription " + id + ", making one now...");
+						local.executeUpdate("UPDATE subscriptions SET expires=" + expires + " WHERE id=" + id + ";");
+					}
+				} else {
+					Main.getPlugin().getLogger().info("Could not find due date for subscription id " + id);
+					noUpdate.add(id); // no need to update subscriptions without a due date
+				}
+			}
+			noUpdate.forEach(i -> savedSubscriptions.remove(i));
+
+			// iterate through subscriptions and grant subscriptions accordingly
+			// at this point savedsubscriptions should only contain users who have not been given monthly rewards, since their expire time has changed
+			for (int id : savedSubscriptions.keySet()) {
+				result = local.executeQuery("SELECT expires FROM subscriptions WHERE id=" + id + ";");
+				if (result.next()) {
+					long timeRemaining = result.getLong(1) - System.currentTimeMillis() / 1000l; // time remaining in seconds
+					result = web.executeQuery("SELECT meta_value FROM wpai_postmeta WHERE post_id="
+							+ id + " AND meta_key='product_name';");
+					if (result.next()) {
+						String product = result.getString(1);
+						local.executeUpdate("UPDATE subscriptions SET product='" + product + "' WHERE id=" + id + ";");
+						String uuid = savedSubscriptions.get(id);
+						uuid = new StringBuilder(uuid).insert(8, '-').insert(13, '-').insert(18, '-').insert(23, '-')
+								.toString();
+						User u = perms.getUserManager().loadUser(UUID.fromString(uuid)).join();
+						if (timeRemaining > 0) {
+							rewardPlayer(u, product, timeRemaining);
+							Main.getPlugin().getLogger().info("Subscription " + id + " for " + product + " has " + timeRemaining + " seconds remaining (" + uuid + ")");
+						} else {
+							Main.getPlugin().getLogger().info("Subscription " + id + " expired (" + timeRemaining + ", " + uuid + ")");
+						}
+					} else {
+						Main.getPlugin().getLogger().warning("Could not find product_name for subscription id " + id);
+					}
+				} else {
+					Main.getPlugin().getLogger().warning("Could not find due date for subscription id " + id + ", but it was marked for update!");
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void rewardPlayer(User player, String product, long expires) {
+		product = product.toLowerCase();
+		String uuid = player.getUniqueId().toString();
+		if(product.contains("user+")) {
+			Main.getPlugin().execute("lp user " + uuid + " permission settemp group.user+ true " + expires + "s");	
+			//player.getNodes().add(getNodeFromName(product, expires));
+			//player.setPermission(getNodeFromName(product, expires), 
+			//TemporaryMergeBehaviour.REPLACE_EXISTING_IF_DURATION_LONGER);
+			//perms.getUserManager().saveUser(player).join();
+			//perms.getMessagingService().ifPresent(service -> service.pushUserUpdate(player));
+			new AsyncChangeCoins(player.getUsername(), uuid, 500).runTaskAsynchronously(Main.getPlugin());
+		} else if (product.contains("donor")) {
+			Main.getPlugin().execute("lp user " + uuid + " permission settemp group.donor true " + expires + "s");	
+			// player.getNodes().add(getNodeFromName(product, expires));
+			//player.setPermission(getNodeFromName(product, expires), 
+			//TemporaryMergeBehaviour.REPLACE_EXISTING_IF_DURATION_LONGER);
+			// perms.getUserManager().saveUser(player).join();
+			// perms.getMessagingService().ifPresent(service -> service.pushUserUpdate(player));
+			new AsyncChangeCoins(player.getUsername(), uuid, 1000).runTaskAsynchronously(Main.getPlugin());
+			new AsyncChangeChests(player.getUsername(), uuid, 1, 1).runTaskAsynchronously(Main.getPlugin());
+		} else if (product.contains("patron") && !product.contains("patron+")) { // REMEMBER TO CHECK STUFF LIKE THIS
+			Main.getPlugin().execute("lp user " + uuid + " permission settemp group.patron true " + expires + "s");	
+			// player.getNodes().add(getNodeFromName(product, expires));
+			//player.setPermission(getNodeFromName(product, expires), 
+			//TemporaryMergeBehaviour.REPLACE_EXISTING_IF_DURATION_LONGER);
+			// perms.getUserManager().saveUser(player).join();
+			// perms.getMessagingService().ifPresent(service -> service.pushUserUpdate(player));
+			new AsyncChangeCoins(player.getUsername(), uuid, 2000).runTaskAsynchronously(Main.getPlugin());
+			new AsyncChangeChests(player.getUsername(), uuid, 1, 2).runTaskAsynchronously(Main.getPlugin());
+		} else if (product.contains("patron+")) {
+			Main.getPlugin().execute("lp user " + uuid + " permission settemp group.patron+ true " + expires + "s");	
+			// player.getNodes().add(getNodeFromName(product, expires));
+			//player.setPermission(getNodeFromName(product, expires), 
+			//TemporaryMergeBehaviour.REPLACE_EXISTING_IF_DURATION_LONGER);
+			// perms.getUserManager().saveUser(player).join();
+			// perms.getMessagingService().ifPresent(service -> service.pushUserUpdate(player));
+			new AsyncChangeCoins(player.getUsername(), uuid, 4000).runTaskAsynchronously(Main.getPlugin());
+			new AsyncChangeChests(player.getUsername(), uuid, 1, 2).runTaskAsynchronously(Main.getPlugin());
+			new AsyncChangeChests(player.getUsername(), uuid, 2, 1).runTaskAsynchronously(Main.getPlugin());
+		} else if (product.contains("worldedit")) {
+			Main.getPlugin().execute("lp user " + uuid + " permission settemp awe.groups.unlimited true " + expires + "s");	
+			// Node node = Node.builder("awe.groups.unlimited").expiry(expires, TimeUnit.SECONDS).build();
+			// player.getNodes().add(node);
+			//player.setPermission(node, TemporaryMergeBehaviour.REPLACE_EXISTING_IF_DURATION_LONGER);
+			// perms.getUserManager().saveUser(player).join();
+			perms.getMessagingService().ifPresent(service -> service.pushUserUpdate(player));
+		} else {
+			Main.getPlugin().getLogger().warning("Could not find reward for product " + product);
+		}
+	}
+
+	// private Node getNodeFromName(String rank, long expires) {
+	// 	rank = rank.toLowerCase();
+	// 	String groupName = null;
+	// 	String[] ranks = { "user+", "donor", "patron", "patron+" };
+	// 	for (String s : ranks) {
+	// 		if (rank.contains(s))
+	// 			groupName = s;
+	// 	}
+	// 	if (groupName == null) {
+	// 		Main.getPlugin().getLogger()
+	// 				.warning("Could not find valid group for item " + rank + "! Using default as group.");
+	// 		groupName = "default";
+	// 	}
+	// 	Group group = perms.getGroupManager().getGroup(groupName);
+	// 	if (group == null) {
+	// 		Main.getPlugin().getLogger().warning("Could not find group " + groupName + "!");
+	// 		group = perms.getGroupManager().getGroup("default");
+	// 	}
+	// 	Node node = Node.builder("group." + group.getName()).expiry(expires, TimeUnit.SECONDS).build();
+	// 	return node;
+	// }
+}

@@ -1,0 +1,14 @@
+name: Left4Hub
+main: me.sisko.left4hub.Main
+version: 1.3
+author: Captain_Sisko
+depend: [Vault, LiteBans]
+commands:
+  givecosmetic:
+    description: Gives a player a cosmetic
+    usage:
+        /givecosmetic <name> <amount> [tier]
+  hubreload:
+    description: Reloads the Left4Hub plugin
+    usage:
+        /hubreload

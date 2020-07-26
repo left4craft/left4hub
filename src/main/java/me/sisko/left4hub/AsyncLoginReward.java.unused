@@ -1,0 +1,85 @@
+package me.sisko.left4hub;
+
+import java.sql.Statement;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import org.bukkit.Bukkit;
+import org.bukkit.scheduler.BukkitRunnable;
+
+public class AsyncLoginReward extends BukkitRunnable {
+	private Connection local;
+	private Connection web;
+
+	public AsyncLoginReward(Connection local, Connection web) {
+		this.local = local;
+		this.web = web;
+	}
+
+	@Override
+	public void run() {
+		try {
+			Statement local = this.local.createStatement();
+			Statement web = this.web.createStatement();
+
+			// get list of users who might be rewarded
+			ResultSet rs = web.executeQuery(
+					"SELECT user_id, username FROM phpbb_users WHERE user_lastpost_time > UNIX_TIMESTAMP() - 604800 AND user_avatar_type='sitesplat.minecraftavatarminotar.minecraftminotar';");
+			HashMap<Integer, String> rewardPlayers = new HashMap<Integer, String>();
+			while (rs.next()) {
+				rewardPlayers.put(rs.getInt("user_id"), rs.getString("username"));
+			}
+
+			// get a list of users who have already been rewarded
+			rs = local.executeQuery("SELECT id FROM forum_rewards WHERE UNIX_TIMESTAMP() < rewardtime + 604800;");
+			while (rs.next()) {
+				rewardPlayers.remove(rs.getInt(1));
+			}
+
+			// save all the players who are about to be rewarded
+			for (int id : rewardPlayers.keySet()) {
+				rs = local.executeQuery("SELECT * FROM forum_rewards WHERE id=" + id + ";");
+				if (rs.next()) {
+					local.executeUpdate("UPDATE forum_rewards SET rewardtime=UNIX_TIMESTAMP() WHERE id=" + id + ";");
+				} else {
+					local.executeUpdate("INSERT INTO forum_rewards VALUES (" + id + ", UNIX_TIMESTAMP());");
+				}
+			}
+
+			// get uuids for all players
+			HashMap<Integer, String> uuids = new HashMap<Integer, String>();
+			ArrayList<Integer> nonexistentids = new ArrayList<Integer>();
+			for (int id : rewardPlayers.keySet()) {
+				rs = local.executeQuery("SELECT uuid FROM forum_users WHERE id=" + id);
+				if (rs.next()) {
+					uuids.put(id, rs.getString("uuid"));
+				} else {
+					Main.getPlugin().getLogger()
+							.warning("Could not find uuid for forum user " + id + " when giving awards!");
+					nonexistentids.add(id);
+				}
+			}
+			nonexistentids.forEach(i -> rewardPlayers.remove(i));
+
+			// finally, reward all players
+			for (int id : rewardPlayers.keySet()) {
+				Main.getPlugin().getLogger().info("Rewarding " + id + " for posting into the forums this week");
+				new AsyncChangeCoins(rewardPlayers.get(id), uuids.get(id), 250)
+						.runTaskAsynchronously(Main.getPlugin());
+				new BukkitRunnable() {
+					@Override
+					public void run() {
+						Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "announce &8Left&44&6Bot &7>> &a"
+								+ rewardPlayers.get(id) + " got 250 coins for posting on the forums this week!");
+					}
+				}.runTask(Main.getPlugin());
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+	}
+}
