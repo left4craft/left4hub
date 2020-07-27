@@ -11,6 +11,8 @@ import litebans.api.*;
 import net.luckperms.api.LuckPerms;
 import net.md_5.bungee.api.ChatColor;
 import redis.clients.jedis.Jedis;
+import java.util.HashMap;
+import org.json.JSONObject;
 
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.bukkit.Bukkit;
@@ -102,8 +104,13 @@ public class Main extends JavaPlugin implements Listener {
 				message = ChatColor.stripColor(message);
 				if (type.equals("broadcast")) {
                     Jedis j = new Jedis(Main.plugin.getConfig().getString("redisip"));
-                    j.auth(Main.plugin.getConfig().getString("redispass"));
-					j.publish("minecraft.chat.global.out", ":exclamation:**" + message + "**");
+					j.auth(Main.plugin.getConfig().getString("redispass"));
+					
+					HashMap<String, String> out = new HashMap<String, String>();
+					out.put("type", "broadcast");
+					out.put("message", ChatColor.stripColor(message));
+					
+					j.publish("minecraft.chat.global.out", new JSONObject(out).toString());
 					if (message.split(" ")[1].contains("mute") || message.split(" ")[1].contains("ban")) {
 						j.publish("minecraft.punish", "update");
 					}

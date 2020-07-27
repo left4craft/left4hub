@@ -2,7 +2,9 @@ package me.sisko.left4hub;
 
 import java.sql.Connection;
 import java.sql.Statement;
+import java.util.HashMap;
 
+import org.json.JSONObject;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import redis.clients.jedis.Jedis;
@@ -30,10 +32,14 @@ public class AsyncCheckUser extends BukkitRunnable {
 			} else {
 				Jedis j = new Jedis(Main.getPlugin().getConfig().getString("redisip"));
 				j.auth(Main.getPlugin().getConfig().getString("redispass"));
+
+				HashMap<String, String> out = new HashMap<String, String>();
+				out.put("type", "welcome");
+				out.put("name", name);
+
 				j.publish("minecraft.chat.global.in",
 						"&d" + name + " has joined Left4Craft for the first time!");
-				j.publish("minecraft.chat.global.out",
-						"<:l4c:429327878879182849> **" + name + " has joined Left4Craft for the first time!**");
+				j.publish("minecraft.chat.global.out", new JSONObject(out).toString());
 				j.close();
 				statement.executeUpdate("INSERT INTO joined_uuids (uuid) VALUES (UNHEX('" + uuid + "'))");
 			}
