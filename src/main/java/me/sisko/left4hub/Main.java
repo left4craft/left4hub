@@ -106,11 +106,11 @@ public class Main extends JavaPlugin implements Listener {
                     Jedis j = new Jedis(Main.plugin.getConfig().getString("redisip"));
 					j.auth(Main.plugin.getConfig().getString("redispass"));
 					
-					HashMap<String, String> out = new HashMap<String, String>();
-					out.put("type", "broadcast");
-					out.put("message", ChatColor.stripColor(message));
+					JSONObject json = new HJSONObject();
+					json.put("type", "broadcast");
+					json.put("message", ChatColor.stripColor(message));
 					
-					j.publish("minecraft.chat.global.out", new JSONObject(out).toString());
+					j.publish("minecraft.chat.global.out", json.toString());
 					if (message.split(" ")[1].contains("mute") || message.split(" ")[1].contains("ban")) {
 						j.publish("minecraft.punish", "update");
 					}
