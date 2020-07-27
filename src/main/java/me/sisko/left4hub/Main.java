@@ -106,7 +106,7 @@ public class Main extends JavaPlugin implements Listener {
                     Jedis j = new Jedis(Main.plugin.getConfig().getString("redisip"));
 					j.auth(Main.plugin.getConfig().getString("redispass"));
 					
-					JSONObject json = new HJSONObject();
+					JSONObject json = new JSONObject();
 					json.put("type", "broadcast");
 					json.put("message", ChatColor.stripColor(message));
 					
