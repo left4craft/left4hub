@@ -36,10 +36,8 @@ public class AsyncCheckUser extends BukkitRunnable {
 				JSONObject json = new JSONObject();
 				json.put("type", "welcome");
 				json.put("name", name);
-
-				j.publish("minecraft.chat.global.in",
-						"&d" + name + " has joined Left4Craft for the first time!");
-				j.publish("minecraft.chat.global.out", json.toString());
+				
+				j.publish("minecraft.chat", json.toString());
 				j.close();
 				statement.executeUpdate("INSERT INTO joined_uuids (uuid) VALUES (UNHEX('" + uuid + "'))");
 			}
