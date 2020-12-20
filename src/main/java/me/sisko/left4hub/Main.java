@@ -11,7 +11,6 @@ import litebans.api.*;
 import net.luckperms.api.LuckPerms;
 import net.md_5.bungee.api.ChatColor;
 import redis.clients.jedis.Jedis;
-import java.util.HashMap;
 import org.json.JSONObject;
 
 import org.apache.commons.dbcp2.BasicDataSource;

@@ -2,7 +2,6 @@ package me.sisko.left4hub;
 
 import java.sql.Connection;
 import java.sql.Statement;
-import java.util.HashMap;
 
 import org.json.JSONObject;
 import org.bukkit.scheduler.BukkitRunnable;

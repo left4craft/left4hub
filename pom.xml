@@ -64,11 +64,10 @@
 		</dependency>
 		<dependency>
 			<groupId>litebans</groupId>
-			<artifactId>Litebans</artifactId>
-			<version>0.98.9</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/../depend/LiteBans.jar</systemPath>
+			<artifactId>LiteBans</artifactId>
+			<version>1.0</version>
 		</dependency>
+
 		<dependency>
 			<groupId>net.luckperms</groupId>
 			<artifactId>api</artifactId>
