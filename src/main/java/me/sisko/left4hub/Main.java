@@ -126,7 +126,7 @@ public class Main extends JavaPlugin implements Listener {
 				108000L);
 		new Announcer("&8Left&44&6Bot &7>> &aGet cool perks at www.left4craft.org/shop").runTaskTimer(this, 36000L,
 				108000L);
-	        new Announcer("&8Left&44&6Bot &7>> &aApplication process for Norwegian citizenship for the town of Norway has opened! Contact EnTo for more info.").runTaskTimer(this, 72000L,
+	        new Announcer("&8Left&44&6Bot &7>> &aJoin Left4Craft on Discord at discord.left4craft.org").runTaskTimer(this, 72000L,
                 		108000L);
 
 		ItemMeta meta;
