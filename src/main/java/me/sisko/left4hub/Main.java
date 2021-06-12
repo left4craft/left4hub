@@ -102,7 +102,7 @@ public class Main extends JavaPlugin implements Listener {
 			public void broadcastSent(String message, String type) {
 				message = ChatColor.stripColor(message);
 				if (type.equals("broadcast")) {
-                    Jedis j = new Jedis(Main.plugin.getConfig().getString("redisip"));
+                    Jedis j = new Jedis(Main.plugin.getConfig().getString("redisip"), Main.plugin.getConfig().getInt("redisport"));
 					j.auth(Main.plugin.getConfig().getString("redispass"));
 					
 					JSONObject json = new JSONObject();
