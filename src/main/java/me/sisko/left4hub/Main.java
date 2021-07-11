@@ -84,9 +84,9 @@ public class Main extends JavaPlugin implements Listener {
 			String user = plugin.getConfig().getString("local.user");
 			String pass = plugin.getConfig().getString("local.pass");
 	
-			ds.setDriverClassName("com.mysql.jdbc.Driver");
-			ds.setUrl("jdbc:mysql://" + host + ":" + port + "/" + database
-			+ "?autoReconnect=true&verifyServerCertificate=false&useSSL=true");
+			ds.setDriverClassName("org.mariadb.jdbc.Driver");
+			ds.setUrl("jdbc:mariadb://" + host + ":" + port + "/" + database
+			+ "?autoReconnect=true&useSSL=true");
 			ds.setUsername(user);
 			ds.setPassword(pass);
 		}
