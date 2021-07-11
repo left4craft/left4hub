@@ -86,7 +86,7 @@ public class Main extends JavaPlugin implements Listener {
 	
 			ds.setDriverClassName("org.mariadb.jdbc.Driver");
 			ds.setUrl("jdbc:mariadb://" + host + ":" + port + "/" + database
-			+ "?autoReconnect=true&useSSL=true");
+			+ "?autoReconnect=true&useSSL=false");
 			ds.setUsername(user);
 			ds.setPassword(pass);
 		}
