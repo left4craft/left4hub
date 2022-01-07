@@ -154,7 +154,7 @@ public class Main extends JavaPlugin implements Listener {
 
 	@EventHandler
 	public void onJoin(PlayerJoinEvent e) {
-		e.getPlayer().teleport(new Location(e.getPlayer().getWorld(), 4.5, 7, -115.5, 90, 0));
+		e.getPlayer().teleport(new Location(e.getPlayer().getWorld(), 0.5, 64, 0.5, -90, 0));
 		e.getPlayer().getInventory().clear();
 		e.getPlayer().getInventory().setItem(0, compass);
 		e.getPlayer().getInventory().setItem(4, book);

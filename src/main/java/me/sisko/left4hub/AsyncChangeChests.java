@@ -38,10 +38,10 @@ public class AsyncChangeChests extends BukkitRunnable {
 				conn.createStatement().executeUpdate("UPDATE procosmetics SET data = '" + playerData.toString() + "' WHERE UUID=\"" + uuid + "\";");
 				Jedis j = new Jedis(Main.getPlugin().getConfig().getString("redisip"));
 				j.auth(Main.getPlugin().getConfig().getString("redispass"));
-				j.publish("minecraft.console.hub.in", "pc give treasures " + name + " " + tier.split("-")[0] + " " + amount);
-				j.publish("minecraft.console.survival.in", "pc give treasures " + name + " " + tier.split("-")[0] + " " + amount);
-				j.publish("minecraft.console.creative.in", "pc give treasures " + name + " " + tier.split("-")[0] + " " + amount);
-				j.publish("minecraft.console.build.in", "pc give treasures " + name + " " + tier.split("-")[0] + " " + amount);
+				j.publish("minecraft.console.hub.in", "pc give treasure " + name + " " + tier.split("-")[0] + " " + amount);
+				j.publish("minecraft.console.survival.in", "pc give treasure " + name + " " + tier.split("-")[0] + " " + amount);
+				j.publish("minecraft.console.creative.in", "pc give treasure " + name + " " + tier.split("-")[0] + " " + amount);
+				j.publish("minecraft.console.build.in", "pc give treasure " + name + " " + tier.split("-")[0] + " " + amount);
 				j.close();
 				Main.getPlugin().getLogger().info("Added " + amount + " keys to offline player " + uuid + " with teir " + tier + ". New Balance: " + playerData.getInt(tier));
 			} else {

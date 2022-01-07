@@ -28,7 +28,7 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.8.1</version>
 				<configuration>
-					<release>16</release>
+					<release>17</release>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -45,10 +45,10 @@
 	</repositories>
 	<dependencies>
 		<dependency>
-			<groupId>com.destroystokyo.paper</groupId>
-			<artifactId>paper-api</artifactId>
-			<version>1.15.1-R0.1-SNAPSHOT</version>
-			<scope>provided</scope>
+    		<groupId>io.papermc.paper</groupId>
+    		<artifactId>paper-api</artifactId>
+    		<version>1.18.1-R0.1-SNAPSHOT</version>
+    		<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.github.MilkBowl</groupId>
