@@ -37,6 +37,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 public class Main extends JavaPlugin implements Listener {
 	private static BasicDataSource ds;
@@ -44,6 +45,8 @@ public class Main extends JavaPlugin implements Listener {
 	//private static Connection phpbbConnection;
 	private static Main plugin;
 	private static LuckPerms perms;
+
+	private static DonationListener donationListener;
 
 	private ItemStack compass;
 	private ItemStack book;
@@ -68,6 +71,8 @@ public class Main extends JavaPlugin implements Listener {
 		// } catch (JSchException e) {
 		// 	e.printStackTrace();
 		// }
+
+		donationListener = new DonationListener("stripe.json");
 
 
 		getCommand("givecosmetic").setExecutor(new GiveCosmeticCommand());
@@ -126,8 +131,15 @@ public class Main extends JavaPlugin implements Listener {
 				108000L);
 		new Announcer("&8Left&44&6Bot &7>> &aGet cool perks at www.left4craft.org/shop").runTaskTimer(this, 36000L,
 				108000L);
-	        new Announcer("&8Left&44&6Bot &7>> &aJoin Left4Craft on Discord at discord.left4craft.org").runTaskTimer(this, 72000L,
-                		108000L);
+	    new Announcer("&8Left&44&6Bot &7>> &aJoin Left4Craft on Discord at discord.left4craft.org").runTaskTimer(this, 72000L,
+                108000L);
+		
+		new BukkitRunnable() {
+			@Override
+			public void run() {
+				donationListener.poll();
+			}
+		}.runTaskTimerAsynchronously(this, 200L, 200L);
 
 		ItemMeta meta;
 		compass = new ItemStack(Material.COMPASS);
@@ -294,5 +306,9 @@ public class Main extends JavaPlugin implements Listener {
 
 	public void execute(String command) {
 		new ExecuteCommand(command).runTask(this);
+	}
+
+	public DonationListener getDonationListener() {
+		return this.donationListener;
 	}
 }

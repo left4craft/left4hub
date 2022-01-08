@@ -15,6 +15,7 @@ public class HubReloadCommand implements CommandExecutor {
 		} else {
 			Main.getPlugin().getLogger().info(ChatColor.GREEN + "Reloading Left4Hub...");
 			ConfigManager.reload();
+			Main.getPlugin().getDonationListener().readStripeConfig("stripe.json");
 		}
 		return true;
 	}
