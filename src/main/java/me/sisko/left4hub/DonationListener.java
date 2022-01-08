@@ -7,21 +7,13 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.jms.JMSException;
-import javax.jms.Session;
-
-import com.amazon.sqs.javamessaging.ProviderConfiguration;
-import com.amazon.sqs.javamessaging.SQSConnection;
-import com.amazon.sqs.javamessaging.SQSConnectionFactory;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.SystemPropertiesCredentialsProvider;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.sqs.AmazonSQS;
-   import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
-import com.google.gson.JsonObject;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.ConsoleCommandSender;
@@ -47,15 +39,7 @@ public class DonationListener {
 			.withRegion(Regions.US_EAST_2)
 			.withCredentials(new AWSStaticCredentialsProvider(awsCreds))
 			.build();
-		// SQSConnectionFactory connectionFactory = new SQSConnectionFactory(
-		// 	new ProviderConfiguration(),
-		// 	AmazonSQSClientBuilder.standard().withRegion(Regions.US_EAST_2).build()
-		// );
-		// try {
-		// 	this.sqs = connectionFactory.createConnection(awsAccessKeyId, awsSecretKey).getAmazonSQSClient();
-		// } catch (JMSException e) {
-		// 	e.printStackTrace();
-		// }
+
 	}
 
 	public void readStripeConfig(String name) {
@@ -171,7 +155,12 @@ public class DonationListener {
 
 			for(String command : commands) {
 				Main.getPlugin().getLogger().info("Running command: " + command);
-				executeCommandSync(command);
+
+				if(!event.getBoolean("livemode")) {
+					Main.getPlugin().getLogger().warning("Not actually executing command since livemode is false for this event");
+				} else {
+					executeCommandSync(command);
+				}
 			}
 			
 		}
