@@ -21,6 +21,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -238,7 +239,7 @@ public class Main extends JavaPlugin implements Listener {
 	}
 
 	@EventHandler
-	public void onClick(PlayerInteractEvent e) {
+	public void onInteract(PlayerInteractEvent e) {
 		Player p = e.getPlayer();
 		if (e.getPlayer().getGameMode() != GameMode.CREATIVE && p.getOpenInventory().getTitle().equalsIgnoreCase("crafting")) {
 			ItemStack item = p.getInventory().getItemInMainHand();
@@ -251,6 +252,11 @@ public class Main extends JavaPlugin implements Listener {
 			else if (item.getType() == Material.CHEST) {
 				p.chat("/pc open main");
 			}
+		}
+
+		// stop crop trampling
+		if(e.getPlayer().getGameMode() != GameMode.CREATIVE && e.getAction().equals(Action.PHYSICAL)) {
+			e.setCancelled(true);
 		}
 	}
 
