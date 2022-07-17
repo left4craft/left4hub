@@ -75,97 +75,23 @@ public class DonationListener {
 
 	// stripe event handler
 	private void handleStripeEvent(JSONObject event) {
-		if(!event.getString("type").equals("invoice.paid")) {
-			Main.getPlugin().getLogger().warning("Recieved unknown event type " + event.getString("type"));
+		if(event.isNull("username") || event.isNull("uuid")) {
+			Main.getPlugin().getLogger().warning("Recieved webhook with no commands to execute");
 			return;
 		}
+		executeCommandSync("announce &9» &a" + event.getString("username") + " &bjust made a purchase!");
+		executeCommandSync("announce &9» &bshop now at &aleft4craft.org/shop!");
 
-		final JSONArray lineItems = event
-										.getJSONObject("data")
-										.getJSONObject("object")
-										.getJSONObject("lines")
-										.getJSONArray("data");
-
-		for(Object lineItemObj : lineItems) {
-			JSONObject lineItem = (JSONObject) lineItemObj;
-
-			// check if line item has minecraft info
-			if(!lineItem.getJSONObject("metadata").has("mc_username")) {
-				Main.getPlugin().getLogger().warning("Event " + lineItem.getString("id") + " has a line item with no metadata!");
-				continue;
+		JSONArray commands = new JSONArray(event.getString("commands"));
+		for(Object command : commands) {
+			String command_str = (String) command;
+			Main.getPlugin().getLogger().info("Running command: " + command_str);
+			if(!event.getBoolean("livemode")) {
+				Main.getPlugin().getLogger().warning("Not actually executing command since livemode is false for this event");
+			} else {
+				executeCommandSync(command_str);
 			}
-
-			// check the product configuration exists
-			String productId = lineItem.getJSONObject("price").getString("product");
-			if(!stripeConfig.getJSONObject("products").has(productId)) {
-				Main.getPlugin().getLogger().warning("Product " + productId + " is not configured in stripe.json!");
-				continue;
-			}
-
-			// placeholders that apply to all
-			String username = lineItem.getJSONObject("metadata").getString("mc_username");
-			String uuid = lineItem.getJSONObject("metadata").getString("mc_uuid");
-			int quantity = lineItem.getInt("quantity");
-
-			// placeholders depends on if it's a subscription
-			String type = "lifetime";
-			String time = "1s";
-
-			// subscription-specific placeholders
-			if(lineItem.getString("type").equals("subscription")) {
-				long remainingSeconds = lineItem.getJSONObject("period").getLong("end")
-							- (System.currentTimeMillis() / 1000l);
-
-				// convert to days with buffer period of 5 days
-				long remainingDays = remainingSeconds / 86400l;
-				remainingDays += 5;
-				time = Long.toString(remainingDays) + "d";
-
-				if(remainingDays > 72l) {
-					type = "yearly";
-				} else {
-					type = "monthly";
-				}
-			}
-
-			JSONObject product = stripeConfig.getJSONObject("products").getJSONObject(productId);
-
-			List<String> commands = new ArrayList<String>();
-
-			// subscriptions with different commands based on whether time
-			if(product.has(type)) {
-				for(Object cmdObj : product.getJSONObject(type).getJSONArray("commands")) {
-					commands.add((String) cmdObj);
-				}
-			}
-
-			for(Object cmdObj : product.getJSONArray("commands")) {
-				commands.add((String) cmdObj);
-			}
-
-			for(int i = 0; i < commands.size(); i++) {
-				// fill in placeholders
-				String command = commands.get(i);
-				command = command.replace("{USERNAME}", username);
-				command = command.replace("{UUID}", uuid);
-				command = command.replace("{QUANTITY}", Integer.toString(quantity));
-				command = command.replace("{TIME}", time);
-				commands.set(i, command);
-			}
-
-			for(String command : commands) {
-				Main.getPlugin().getLogger().info("Running command: " + command);
-
-				if(!event.getBoolean("livemode")) {
-					Main.getPlugin().getLogger().warning("Not actually executing command since livemode is false for this event");
-				} else {
-					executeCommandSync(command);
-				}
-			}
-			
 		}
-
-
 	}
 
 	private void executeCommandSync(String cmd) {
