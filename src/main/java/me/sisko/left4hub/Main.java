@@ -250,7 +250,7 @@ public class Main extends JavaPlugin implements Listener {
 				p.chat("/help");
 			}
 			else if (item.getType() == Material.CHEST) {
-				p.chat("/pc open main");
+				p.chat("/cosmetics");
 			}
 		}
 
